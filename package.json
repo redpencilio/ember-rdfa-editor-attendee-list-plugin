@@ -1,13 +1,13 @@
 {
   "name": "@lblod/ember-rdfa-editor-attendee-list-plugin",
   "version": "0.0.0",
-  "description": "The default blueprint for ember-cli addons.",
+  "description": "The manager plugin for the attendees list of a redpencil meeting.",
   "keywords": [
     "ember-addon"
   ],
   "repository": "",
   "license": "MIT",
-  "author": "",
+  "author": "redpencil.io",
   "directories": {
     "doc": "doc",
     "test": "tests"
