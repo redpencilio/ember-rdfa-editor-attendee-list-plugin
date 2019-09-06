@@ -5,7 +5,10 @@
   "keywords": [
     "ember-addon"
   ],
-  "repository": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mehran-naghizadeh/ember-rdfa-editor-attendee-list-plugin.git"
+  },
   "license": "MIT",
   "author": "redpencil.io",
   "directories": {
