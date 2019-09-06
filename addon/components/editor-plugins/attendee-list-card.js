@@ -18,12 +18,18 @@ export default Component.extend({
   store: service(),
   attendees: A([]),
 
-  availablePeople: computed('attendees.[]', 'people.[]', function(){
-    return this.people.filter(p => ! this.attendees.includes(p)).sortBy('firstname');
+  availableMemberships: computed('attendees.[]', 'memberships.[]', function(){
+    return this.memberships.filter(m => ! this.attendees.includes(m)).sortBy('member.firstname');
+  }),
+
+  nonMemberPeople: computed('people.[]', function(){
+    const memberPeople = this.memberships.toArray().flatMap(m => m.member);
+    return this.people.filter( p => ! memberPeople.includes(p)).sortBy('firstname');
   }),
 
   sortedAttendees: computed('attendees.[]', function(){
-    return this.attendees.sortBy('firstname');
+    // TODO: Sort based on member.firstname
+    return this.attendees;
   }),
 
   innerHTML: computed('attendees.[]', function(){
@@ -85,18 +91,31 @@ export default Component.extend({
 
   async init() {
     this._super(...arguments);
-    this.set('people', await this.store.findAll('person'));
+
+    this.set('memberships', await this.store.findAll('membership'));
     this.set('organizations', (await this.store.findAll('organization')).sortBy('title'));
+    this.set('people', await this.store.findAll('membership'));
+    this.set('roles', (await this.store.findAll('role')).sortBy('label'));
+
     this.set('status', EmberObject.create({
       isEditing: true,
       isAdding: false,
-      isCreating: false
+      isCreatingMembership: false,
+      isCreatingPerson: false
     }));
+  },
+
+  setStatus (status) {
+    this.status.set('isEditing', status === 'isEditing');
+    this.status.set('isAdding', status === 'isAdding');
+    this.status.set('isCreatingMembership', status === 'isCreatingMembership');
+    this.status.set('isCreatingPerson', status === 'isCreatingPerson');
   },
 
   actions: {
     addAttendee (attendee) {
       this.attendees.pushObject(attendee);
+      this.setStatus('isEditing');
     },
 
     commit() {
@@ -112,6 +131,10 @@ export default Component.extend({
       this.hintsRegistry.removeHintsAtLocation(this.location, this.hrId, this.who);
     },
 
+    async createMembership() {
+      // TODO:
+    },
+
     async createPerson() {
       const person = this.store.createRecord('person', {
         firstname: this.newFirstname,
@@ -119,6 +142,8 @@ export default Component.extend({
         organization: this.selectedOrganization
       });
       await person.save();
+
+      this.setStatus( 'isCreatingMembership' );
     },
 
     removeAttendee (attendee) {
@@ -129,10 +154,16 @@ export default Component.extend({
       this.set('selectedOrganization', this.organizations.find(org => org.id == event.currentTarget.value));
     },
 
+    setPerson (event) {
+      // TODO:
+    },
+
+    setRole (event) {
+      // TODO:
+    },
+
     setStatus (status) {
-      this.status.set('isEditing', status === 'isEditing');
-      this.status.set('isAdding', status === 'isAdding');
-      this.status.set('isCreating', status === 'isCreating');
+      this.setStatus(status);
     }
   }
 });

@@ -15,29 +15,45 @@
 
 <div class="modal-dialog__content">
 
-  <button {{action "setStatus" "isEditing"}}
+  {{#if status.isAdding}}
+    <button {{action "setStatus" "isAdding"}}
+      class="px-3 py-1 font-bold 
+            {{if status.isAdding "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
+      Kiez een deelnemer
+    </button>
+  {{else}}
+    <button {{action "setStatus" "isEditing"}}
+      class="px-3 py-1 font-bold 
+            {{if status.isEditing "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
+      Bewerk de lijst
+    </button>
+  {{/if}}
+  <button {{action "setStatus" "isCreatingPerson"}}
     class="px-3 py-1 font-bold 
-          {{if status.isEditing "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
-    Bewerk de lijst
+          {{if status.isCreatingPerson "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
+    <i class="plus icon"></i>Mens
   </button>
-  <button {{action "setStatus" "isAdding"}}
+  <button {{action "setStatus" "isCreatingMembership"}}
     class="px-3 py-1 font-bold 
-          {{if status.isAdding "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
-    Voeg mensen
-  </button>
-  <button {{action "setStatus" "isCreating"}}
-    class="px-3 py-1 font-bold 
-          {{if status.isCreating "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
-    Maak nieuwe mensen
+          {{if status.isCreatingMembership "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
+    <i class="plus icon"></i>Lidmaatschap
   </button>
 
   <div class="bg-gray-300 p-2 text-black">
     {{#if status.isEditing}}
+      <div class="flex justify-end mb-2">
+        <button {{action "setStatus" "isAdding"}}
+          class="ml-2 p-1 border-2 border-gray-800 rounded
+                bg-white hover:bg-gray-800
+                text-gray-800 hover:text-white">
+          <i class="plus icon"></i>Voeg een nieuwe deelneemer
+        </button>
+      </div>
       {{!-- List of current attendees --}}
       <ul class="w-full">
         {{#each sortedAttendees as |attendee|}}
           <li class="link-list__item flex items-center hover:bg-gray-400">
-            <span class="flex-1">{{attendee.firstname}} {{attendee.lastname}}</span>
+            <span class="flex-1">{{attendee.member.firstname}} {{attendee.member.lastname}}</span>
             <button {{action "removeAttendee" attendee}}
                 class="px-3 py-1 hover:bg-teal-600 hover:text-white rounded">
               <i class="trash icon pl-1"></i>
@@ -48,21 +64,32 @@
     {{/if}}
 
     {{#if status.isAdding}}
+      <div class="flex justify-end mb-2">
+        <button {{action "setStatus" "isEditing"}}
+          class="ml-2 p-1 border-2 border-gray-800 rounded
+                bg-white hover:bg-gray-800
+                text-gray-800 hover:text-white">
+          <i class="close icon"></i>
+        </button>
+      </div>
       {{!-- List of available people --}}
       <ul class="w-full">
         {{!-- TODO: Take care of pagination --}}
-        {{#each availablePeople as |person|}}
+        {{#each availableMemberships as |membership|}}
           <li class="link-list__item">
-            <button {{action "addAttendee" person}}
-                class="px-2 py-1 hover:bg-teal-600 hover:text-white w-full text-left rounded">
-              {{person.firstname}} {{person.lastname}}
+            <button {{action "addAttendee" membership}}
+                class="px-2 py-1 hover:bg-teal-600 hover:text-white w-full text-left rounded flex">
+              <span class="flex-1">
+                {{membership.member.firstname}} {{membership.member.lastname}}
+              </span>
+              <span class="flex-none font-light">{{membership.role.label}}</span>
             </button>
           </li>
         {{/each}}
       </ul>
     {{/if}}
 
-    {{#if status.isCreating}}
+    {{#if status.isCreatingPerson}}
       <div class="flex flex-col">
         <div class="flex mb-1 items-center">
           <label class="w-24">Fisrtname</label>
@@ -84,6 +111,35 @@
           class="ml-2 p-1  border-2 border-gray-800 rounded
                  bg-white hover:bg-gray-800
                  text-gray-800 hover:text-white">
+          Creër
+        </button>
+      </div>
+    {{/if}}
+
+    {{#if status.isCreatingMembership}}
+      <div class="flex items-stretch">
+        {{!-- Person selection menu --}}
+        <select onchange={{action "setPerson"}}
+                class="flex-1 mr-1 bg-gray-700 text-white mb-2 h-full">
+          <option disabled selected value> -- Kiez iemand -- </option>
+          {{#each nonMemberPeople as |person|}}
+            <option value={{person.id}}>{{person.firstname}} {{person.lastname}}</option>
+          {{/each}}
+        </select>
+
+        {{!-- Role selection menu --}}
+        <select onchange={{action "setRole"}}
+                class="flex-1 mr-1 bg-gray-700 text-white mb-2">
+          <option disabled selected value> -- Kiez een rol -- </option>
+          {{#each roles as |role|}}
+            <option value={{role.id}}>{{role.label}}</option>
+          {{/each}}
+        </select>
+
+        <button {{action "createMembership"}}
+          class="ml-2 p-1  border-2 border-gray-800 rounded
+                bg-white hover:bg-gray-800
+                text-gray-800 hover:text-white">
           Creër
         </button>
       </div>
