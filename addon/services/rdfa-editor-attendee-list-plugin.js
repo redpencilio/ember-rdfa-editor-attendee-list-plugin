@@ -1,7 +1,9 @@
+/* eslint-disable require-yield */
 import { getOwner } from '@ember/application';
 import Service from '@ember/service';
 import EmberObject, { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
+import { inject as service } from '@ember/service';
 
 /**
  * Service responsible for correct annotation of dates
@@ -12,6 +14,15 @@ import { task } from 'ember-concurrency';
  * @extends EmberService
  */
 const RdfaEditorAttendeeListPlugin = Service.extend({
+  store: service(),
+
+  allPeople: computed (function() {
+    return this.store.peekAll('person').sortBy('firstname');
+  }),
+
+  attendees: computed (function() {
+    return this.store.peekAll('person').sortBy('firstname');
+  }),
 
   init(){
     this._super(...arguments);
@@ -31,19 +42,17 @@ const RdfaEditorAttendeeListPlugin = Service.extend({
    * @public
    */
   execute: task(function * (hrId, contexts, hintsRegistry, editor) {
-    if (contexts.length === 0) return [];
-
     const hints = [];
-    contexts.forEach((context) => {
-      let relevantContext = this.detectRelevantContext(context)
-      if (relevantContext) {
-        hintsRegistry.removeHintsInRegion(context.region, hrId, this.get('who'));
-        hints.pushObjects(this.generateHintsForContext(context));
-      }
-    });
-    const cards = hints.map( (hint) => this.generateCard(hrId, hintsRegistry, editor, hint));
-    if(cards.length > 0){
-      hintsRegistry.addHints(hrId, this.get('who'), cards);
+    contexts
+      .filter (this.detectRelevantContext)
+      .forEach (context => {
+          hintsRegistry.removeHintsInRegion(context.region, hrId, this.get('who'));
+          hints.pushObjects(this.generateHintsForContext(context));
+      });
+
+    const cards = hints.map (hint => this.generateCard(hrId, hintsRegistry, editor, hint));
+    if (cards.length > 0) {
+      hintsRegistry.addHints (hrId, this.get('who'), cards);
     }
   }),
 
@@ -59,10 +68,10 @@ const RdfaEditorAttendeeListPlugin = Service.extend({
    * @private
    */
   detectRelevantContext(context){
-    return context.text.toLowerCase().indexOf('hello') >= 0;
+    const lastTriple = context.context.slice(-1)[0];
+    return lastTriple.predicate === 'a' &&
+           lastTriple.object === 'http://data.notable.redpencil.io/#AttendeeList';
   },
-
-
 
   /**
    * Maps location of substring back within reference location
@@ -95,10 +104,10 @@ const RdfaEditorAttendeeListPlugin = Service.extend({
    * @private
    */
   generateCard(hrId, hintsRegistry, editor, hint){
-    return EmberObject.create({
+    const obj = EmberObject.create({
       info: {
         label: this.get('who'),
-        plainValue: hint.text,
+        // attendees: this.attendees,
         htmlString: '<b>hello world</b>',
         location: hint.location,
         hrId, hintsRegistry, editor
@@ -106,6 +115,7 @@ const RdfaEditorAttendeeListPlugin = Service.extend({
       location: hint.location,
       card: this.get('who')
     });
+    return obj;
   },
 
   /**

@@ -1,10 +1,112 @@
-<p class="u-spacer--tiny">{{info.label}} <br>
-  <strong>{{info.plainValue}}</strong>
-</p>
+<div class="modal-dialog__header">
+  <div class="grid">
+    <div class="col--10-12">
+      <p class="u-spacer--tiny">
+        Bewerk de deelnemerslijst
+      </p>
+    </div>
+    {{!--       <div class="col--2-12 u-align-right">
+            <a class="link--icon--close" href="#">
+            <span class="u-visually-hidden">Venster sluiten</span>
+            </a>
+            </div> --}}
+  </div>
+</div>
 
-{{#wu-button-group}}
-  {{wu-button label="Juist" size="small" isNarrow=true command="ctrl + j" commandLocation="below" onClick=(action "insert")}}
-  {{wu-button label="Negeer" size="tiny" isLink=true isDark=true isNarrow=true command="esc" commandLocation="below" onClick=null}}
-{{/wu-button-group}}
+<div class="modal-dialog__content">
+
+  <button {{action "setStatus" "isEditing"}}
+    class="px-3 py-1 font-bold 
+          {{if status.isEditing "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
+    Bewerk de lijst
+  </button>
+  <button {{action "setStatus" "isAdding"}}
+    class="px-3 py-1 font-bold 
+          {{if status.isAdding "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
+    Voeg mensen
+  </button>
+  <button {{action "setStatus" "isCreating"}}
+    class="px-3 py-1 font-bold 
+          {{if status.isCreating "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
+    Maak nieuwe mensen
+  </button>
+
+  <div class="bg-gray-300 p-2 text-black">
+    {{#if status.isEditing}}
+      {{!-- List of current attendees --}}
+      <ul class="w-full">
+        {{#each sortedAttendees as |attendee|}}
+          <li class="link-list__item flex items-center hover:bg-gray-400">
+            <span class="flex-1">{{attendee.firstname}} {{attendee.lastname}}</span>
+            <button {{action "removeAttendee" attendee}}
+                class="px-3 py-1 hover:bg-teal-600 hover:text-white rounded">
+              <i class="trash icon pl-1"></i>
+            </button>
+          </li>
+        {{/each}}
+      </ul>
+    {{/if}}
+
+    {{#if status.isAdding}}
+      {{!-- List of available people --}}
+      <ul class="w-full">
+        {{!-- TODO: Take care of pagination --}}
+        {{#each availablePeople as |person|}}
+          <li class="link-list__item">
+            <button {{action "addAttendee" person}}
+                class="px-2 py-1 hover:bg-teal-600 hover:text-white w-full text-left rounded">
+              {{person.firstname}} {{person.lastname}}
+            </button>
+          </li>
+        {{/each}}
+      </ul>
+    {{/if}}
+
+    {{#if status.isCreating}}
+      <div class="flex flex-col">
+        <div class="flex mb-1 items-center">
+          <label class="w-24">Fisrtname</label>
+          <Input @value={{newFirstname}} placeholder="First name" class="flex-1 p-1" />
+        </div>
+        <div class="flex mb-2 items-center">
+          <label class="w-24">Lastname</label>
+          <Input @value={{newLastname}} placeholder="Last name" class="flex-1 p-1" />
+        </div>
+        {{!-- Organization selection menu --}}
+        <select onchange={{action "setOrganization"}}
+                class="flex-1 mr-1 bg-gray-700 text-white mb-2">
+          <option disabled selected value> -- Kiez een organisatie -- </option>
+          {{#each organizations as |organization|}}
+            <option value={{organization.id}}>{{organization.title}}</option>
+          {{/each}}
+        </select>
+        <button {{action "createPerson"}}
+          class="ml-2 p-1  border-2 border-gray-800 rounded
+                 bg-white hover:bg-gray-800
+                 text-gray-800 hover:text-white">
+          Creër
+        </button>
+      </div>
+    {{/if}}
+  </div>
+</div>
+
+<div class="modal-dialog__footer">
+  {{#wu-button-group}}
+    {{wu-button label="Vervangen"
+      onClick=(action "commit")
+      command="ctrl + j"
+      commandLocation="below"}}
+
+    {{!-- {{wu-button label="Negeer"
+      onClick=null
+      size="tiny"
+      isLink=true
+      isDark=true
+      isNarrow=true
+      command="esc"
+      commandLocation="below"}} --}}
+  {{/wu-button-group}}
+</div>
 
 {{yield}}
