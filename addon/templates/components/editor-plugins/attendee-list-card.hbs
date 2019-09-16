@@ -110,7 +110,8 @@
         <button {{action "createPerson"}}
           class="ml-2 p-1  border-2 border-gray-800 rounded
                  bg-white hover:bg-gray-800
-                 text-gray-800 hover:text-white">
+                 text-gray-800 hover:text-white"
+          disabled={{not readyToCreatePerson}}>
           Creër
         </button>
       </div>
@@ -139,7 +140,8 @@
         <button {{action "createMembership"}}
           class="ml-2 p-1  border-2 border-gray-800 rounded
                 bg-white hover:bg-gray-800
-                text-gray-800 hover:text-white">
+                text-gray-800 hover:text-white"
+          disabled={{not readyToCreateMembership}}>
           Creër
         </button>
       </div>

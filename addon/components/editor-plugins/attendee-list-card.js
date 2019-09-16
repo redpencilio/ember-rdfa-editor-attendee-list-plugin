@@ -19,7 +19,7 @@ export default Component.extend({
   attendees: A([]),
 
   availableMemberships: computed('attendees.[]', 'memberships.[]', function(){
-    return this.memberships.filter(m => ! this.attendees.includes(m)).sortBy('member.firstname');
+    return this.memberships.filter(m => ! this.attendees.includes(m.member)).sortBy('member.firstname');
   }),
 
   nonMemberPeople: computed('people.[]', function(){
@@ -33,28 +33,44 @@ export default Component.extend({
   }),
 
   innerHTML: computed('attendees.[]', function(){
-    return '<ul>'
-      + this.attendees
-            .map(attendee => `
-              <li property="notable:meetingAttendee"
-                  typeof="org:Membership">
-                <span resource="membership/aad"
-                      typeof="foaf:Person"
-                      property="org:member">
-                  <span property="foaf:firstName">${attendee.firstname} </span>
-                  <span property="foaf:LastName">${attendee.lastname}</span>
-                  <span> - </span>
-                  <span property="org:memberOf"
-                        typeof="org:Organization">
-                    <span property="skos:label">
-                      attendee.organization.title
-                    </span>
-                  </span>
-                </span>
-              </li>
-            `)
-            .join('')
-      + '</ul>';
+    // Each attendee is an object of type membership
+    const list = this.attendees
+      .map(attendee => attendee.get('member'))
+      .map(member => `
+        <li property="notable:meetingAttendee"
+            typeof="org:Membership">
+          <span resource="http://data.notable.redpencil.io/person/${member.get('id')}"
+                typeof="foaf:Person"
+                property="org:member">
+            <span property="foaf:firstName">${member.get('firstname')} </span>
+            <span property="foaf:LastName">${member.get('lastname')}</span>
+            <span> - </span>
+            <span property="org:memberOf"
+                  typeof="org:Organization">
+              <span property="skos:label">
+                ${member.get('organization.title')}
+              </span>
+            </span>
+          </span>
+        </li>`);
+
+    return `
+      <div class="text-gray-500 italic">
+        <i class="edit icon"></i> Edit the list
+      </div>
+      <ul>
+        ${list.join('')}
+      </ul>`;
+  }),
+
+  readyToCreateMembership: computed('selectedPerson', 'selectedRole', function(){
+    return this.selectedPerson && this.selectedRole;
+  }),
+
+  readyToCreatePerson: computed('selectedPerson', 'selectedRole', function(){
+    return (this.newFirstname && this.newFirstname !== '') &&
+           (this.newLastName && this.newLastName !== '') &&
+           this.selectedOrganization;
   }),
 
   /**
@@ -92,9 +108,14 @@ export default Component.extend({
   async init() {
     this._super(...arguments);
 
-    this.set('memberships', await this.store.findAll('membership'));
+    this.set('memberships', await this.store.query('membership', {
+      include: 'member,member.organization'
+    }));
+
     this.set('organizations', (await this.store.findAll('organization')).sortBy('title'));
-    this.set('people', await this.store.findAll('membership'));
+    this.set('people', await this.store.query('person', {
+      include: 'organization'
+    }));
     this.set('roles', (await this.store.findAll('role')).sortBy('label'));
 
     this.set('status', EmberObject.create({
@@ -113,8 +134,8 @@ export default Component.extend({
   },
 
   actions: {
-    addAttendee (attendee) {
-      this.attendees.pushObject(attendee);
+    addAttendee (membership) {
+      this.attendees.pushObject(membership);
       this.setStatus('isEditing');
     },
 
@@ -132,7 +153,12 @@ export default Component.extend({
     },
 
     async createMembership() {
-      // TODO:
+      const membership = this.store.createRecord('membership', {
+        member: this.selectedPerson,
+        role: this.selectedRole
+      });
+
+      await membership.save();
     },
 
     async createPerson() {
@@ -151,15 +177,15 @@ export default Component.extend({
     },
 
     setOrganization (event) {
-      this.set('selectedOrganization', this.organizations.find(org => org.id == event.currentTarget.value));
+      this.set('selectedOrganization', this.organizations.find(o => o.id == event.currentTarget.value));
     },
-
+    
     setPerson (event) {
-      // TODO:
+      this.set('selectedPerson', this.people.find(p => p.id == event.currentTarget.value));
     },
-
+    
     setRole (event) {
-      // TODO:
+      this.set('selectedRole', this.roles.find(r => r.id == event.currentTarget.value));
     },
 
     setStatus (status) {
