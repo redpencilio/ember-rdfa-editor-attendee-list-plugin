@@ -122,7 +122,7 @@ export default Component.extend({
       const mappedLocation = this.get('hintsRegistry').updateLocationToCurrentIndex(this.get('hrId'), this.get('location'));
       this.get('hintsRegistry').removeHintsAtLocation(mappedLocation, this.get('hrId'), 'editor-plugins/attendee-list-card');
 
-      const selection = this.editor.selectContext(mappedLocation, { datatype: this.info.datatype });
+      const selection = this.editor.selectContext(mappedLocation, { typeof: this.info.typeof });
       this.editor.update(selection, {
         set: {
           innerHTML: this.innerHTML

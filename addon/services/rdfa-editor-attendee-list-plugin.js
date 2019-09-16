@@ -46,8 +46,8 @@ const RdfaEditorAttendeeListPlugin = Service.extend({
     contexts
       .filter (this.detectRelevantContext)
       .forEach (context => {
-          hintsRegistry.removeHintsInRegion(context.region, hrId, this.get('who'));
-          hints.pushObjects(this.generateHintsForContext(context));
+        hintsRegistry.removeHintsInRegion(context.region, hrId, this.get('who'));
+        hints.pushObjects(this.generateHintsForContext(context));
       });
 
     const cards = hints.map (hint => this.generateCard(hrId, hintsRegistry, editor, hint));
@@ -107,9 +107,8 @@ const RdfaEditorAttendeeListPlugin = Service.extend({
     const obj = EmberObject.create({
       info: {
         label: this.get('who'),
-        // attendees: this.attendees,
-        htmlString: '<b>hello world</b>',
         location: hint.location,
+        typeof: 'http://data.notable.redpencil.io/#AttendeeList',
         hrId, hintsRegistry, editor
       },
       location: hint.location,
