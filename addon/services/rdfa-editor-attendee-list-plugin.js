@@ -16,17 +16,44 @@ import { inject as service } from '@ember/service';
 const RdfaEditorAttendeeListPlugin = Service.extend({
   store: service(),
 
-  allPeople: computed (function() {
-    return this.store.peekAll('person').sortBy('firstname');
-  }),
-
   attendees: computed (function() {
     return this.store.peekAll('person').sortBy('firstname');
   }),
 
-  init(){
+  async searchAttendees(firstname) {
+    const key = firstname.trim().replace(/\n/g, ' ').split(/\s+/)[0];
+    return  await this.store.query('membership', {
+      include: 'member,member.organization',
+      'filter[member][firstname]': key.replace(/\u200b|\u200b$/, '')
+    });
+  },
+
+  async createMembership() {
+    const membership = this.store.createRecord('membership', {
+      member: this.selectedPerson,
+      role: this.selectedRole
+    });
+    await membership.save();
+  },
+
+  async createPerson( options ) {
+    const person = this.store.createRecord('person', options);
+    await person.save();
+  },
+
+  async init(){
     this._super(...arguments);
-    const config = getOwner(this).resolveRegistration('config:environment');
+    getOwner(this).resolveRegistration('config:environment');
+
+    this.set('memberships', await this.store.query('membership', {
+      include: 'member,member.organization'
+    }));
+
+    this.set('organizations', (await this.store.findAll('organization')).sortBy('title'));
+    this.set('people', await this.store.query('person', {
+      include: 'organization'
+    }));
+    this.set('roles', (await this.store.findAll('role')).sortBy('label'));
   },
 
   /**
@@ -67,10 +94,16 @@ const RdfaEditorAttendeeListPlugin = Service.extend({
    *
    * @private
    */
-  detectRelevantContext(context){
+  detectRelevantContext (context) {
     const lastTriple = context.context.slice(-1)[0];
-    return lastTriple.predicate === 'a' &&
-           lastTriple.object === 'http://data.notable.redpencil.io/#AttendeeList';
+
+    const isRel = isRelevant(lastTriple);
+    return isRel;
+
+    function isRelevant (triple) {
+      return triple.predicate === 'a' &&
+             triple.object === 'http://data.notable.redpencil.io/#AttendeeList';
+    }
   },
 
   /**
@@ -106,8 +139,10 @@ const RdfaEditorAttendeeListPlugin = Service.extend({
   generateCard(hrId, hintsRegistry, editor, hint){
     const obj = EmberObject.create({
       info: {
+        context: hint.context,
         label: this.get('who'),
         location: hint.location,
+        plainValue: hint.text,
         typeof: 'http://data.notable.redpencil.io/#AttendeeList',
         hrId, hintsRegistry, editor
       },
@@ -124,16 +159,17 @@ const RdfaEditorAttendeeListPlugin = Service.extend({
    *
    * @param {Object} context Text snippet at a specific location with an RDFa context
    *
-   * @return {Object} [{dateString, location}]
+   * @return {Object} [{text, location, context, resource }]
    *
    * @private
    */
   generateHintsForContext(context){
+    const triple = context.context.slice(-1)[0];
     const hints = [];
-    const index = context.text.toLowerCase().indexOf('hello');
-    const text = context.text.slice(index, index+5);
-    const location = this.normalizeLocation([index, index + 5], context.region);
-    hints.push({text, location});
+    const resource = triple.subject;
+    const text = context.text || '';
+    const location = context.region;
+    hints.push({ text, location, context, resource });
     return hints;
   }
 });

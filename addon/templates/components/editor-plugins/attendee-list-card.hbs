@@ -2,36 +2,33 @@
   <div class="grid">
     <div class="col--10-12">
       <p class="u-spacer--tiny">
-        Bewerk de deelnemerslijst
+        {{#if status.isSelecting}}
+          <strong>Kiez een van de aanwezigen die passen bij</strong>
+          <br>
+          <em>{{currentValue}}</em>
+        {{/if}}
+        {{#if status.isCreatingPerson}}
+          <strong>Creër een niewe persoon</strong>
+        {{/if}}
+        {{#if status.isCreatingMembership}}
+          <strong>Creër een niewe lidmaatschap</strong>
+        {{/if}}
       </p>
     </div>
-    {{!--       <div class="col--2-12 u-align-right">
-            <a class="link--icon--close" href="#">
-            <span class="u-visually-hidden">Venster sluiten</span>
-            </a>
-            </div> --}}
   </div>
 </div>
 
 <div class="modal-dialog__content">
 
-  {{#if status.isAdding}}
-    <button {{action "setStatus" "isAdding"}}
-      class="px-3 py-1 font-bold 
-            {{if status.isAdding "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
-      Kiez een deelnemer
-    </button>
-  {{else}}
-    <button {{action "setStatus" "isEditing"}}
-      class="px-3 py-1 font-bold 
-            {{if status.isEditing "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
-      Bewerk de lijst
-    </button>
-  {{/if}}
+  <button {{action "setStatus" "isSelecting"}}
+    class="px-3 py-1 font-bold 
+          {{if status.isSelecting "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
+    Kiez
+  </button>
   <button {{action "setStatus" "isCreatingPerson"}}
     class="px-3 py-1 font-bold 
           {{if status.isCreatingPerson "bg-gray-300 text-black rounded-tr rounded-tl" "text-gray-300 hover:text-teal-500"}}">
-    <i class="plus icon"></i>Mens
+    <i class="plus icon"></i>Persoon
   </button>
   <button {{action "setStatus" "isCreatingMembership"}}
     class="px-3 py-1 font-bold 
@@ -40,53 +37,27 @@
   </button>
 
   <div class="bg-gray-300 p-2 text-black">
-    {{#if status.isEditing}}
-      <div class="flex justify-end mb-2">
-        <button {{action "setStatus" "isAdding"}}
-          class="ml-2 p-1 border-2 border-gray-800 rounded
-                bg-white hover:bg-gray-800
-                text-gray-800 hover:text-white">
-          <i class="plus icon"></i>Voeg een nieuwe deelneemer
-        </button>
-      </div>
-      {{!-- List of current attendees --}}
-      <ul class="w-full">
-        {{#each sortedAttendees as |attendee|}}
-          <li class="link-list__item flex items-center hover:bg-gray-400">
-            <span class="flex-1">{{attendee.member.firstname}} {{attendee.member.lastname}}</span>
-            <button {{action "removeAttendee" attendee}}
-                class="px-3 py-1 hover:bg-teal-600 hover:text-white rounded">
-              <i class="trash icon pl-1"></i>
-            </button>
-          </li>
-        {{/each}}
-      </ul>
-    {{/if}}
-
-    {{#if status.isAdding}}
-      <div class="flex justify-end mb-2">
-        <button {{action "setStatus" "isEditing"}}
-          class="ml-2 p-1 border-2 border-gray-800 rounded
-                bg-white hover:bg-gray-800
-                text-gray-800 hover:text-white">
-          <i class="close icon"></i>
-        </button>
-      </div>
-      {{!-- List of available people --}}
-      <ul class="w-full">
-        {{!-- TODO: Take care of pagination --}}
-        {{#each availableMemberships as |membership|}}
-          <li class="link-list__item">
-            <button {{action "addAttendee" membership}}
-                class="px-2 py-1 hover:bg-teal-600 hover:text-white w-full text-left rounded flex">
-              <span class="flex-1">
-                {{membership.member.firstname}} {{membership.member.lastname}}
-              </span>
+    {{#if status.isSelecting}}
+      {{#if candidateAttendees.length}}
+        <ul class="w-full">
+          {{!-- TODO: Take care of pagination --}}
+          {{#each candidateAttendees as |membership|}}
+            <li {{action (mut selectedMembership) membership}} role="button"
+                class="link-list__item px-2 py-1 hover:bg-teal-600 hover:text-white w-full text-left rounded flex {{if (eq selectedMembership membership) "text-white bg-teal-600"}}">
+              <span class="flex-1">{{membership.member.firstname}} {{membership.member.lastname}}</span>
               <span class="flex-none font-light">{{membership.role.label}}</span>
-            </button>
-          </li>
-        {{/each}}
-      </ul>
+            </li>
+          {{/each}}
+        </ul>
+      {{else}}
+        <div>
+          {{#if searchAttendees.isRunning}}
+            Aan het zoeken
+          {{else}}
+            Geen enkele aanwezig past bij <em>{{currentValue}}</em>
+          {{/if}}
+        </div>
+      {{/if}}
     {{/if}}
 
     {{#if status.isCreatingPerson}}
@@ -149,22 +120,15 @@
   </div>
 </div>
 
-<div class="modal-dialog__footer">
-  {{#wu-button-group}}
-    {{wu-button label="Vervangen"
-      onClick=(action "commit")
-      command="ctrl + j"
-      commandLocation="below"}}
-
-    {{!-- {{wu-button label="Negeer"
-      onClick=null
-      size="tiny"
-      isLink=true
-      isDark=true
-      isNarrow=true
-      command="esc"
-      commandLocation="below"}} --}}
-  {{/wu-button-group}}
-</div>
+{{#if status.isSelecting}}
+  <div class="modal-dialog__footer">
+    {{#wu-button-group}}
+      {{wu-button label="Vervangen"
+        onClick=(action "insert")
+        command="ctrl + j"
+        commandLocation="below"}}
+    {{/wu-button-group}}
+  </div>
+{{/if}}
 
 {{yield}}

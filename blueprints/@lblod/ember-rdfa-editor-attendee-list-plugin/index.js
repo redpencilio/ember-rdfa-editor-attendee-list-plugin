@@ -1,4 +1,5 @@
 /* eslint-env node */
+// eslint-disable-next-line node/no-extraneous-require
 const existsSync = require('exists-sync');
 
 const profilesFile = 'app/config/editor-profiles.js';

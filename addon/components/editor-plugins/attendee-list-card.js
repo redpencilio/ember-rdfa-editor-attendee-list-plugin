@@ -5,6 +5,7 @@ import { inject as service } from '@ember/service';
 import { A }  from '@ember/array';
 import { computed }  from '@ember/object';
 import EmberObject from '@ember/object';
+import { task } from 'ember-concurrency';
 
 /**
 * Card displaying a hint of the Date plugin
@@ -15,12 +16,33 @@ import EmberObject from '@ember/object';
 */
 export default Component.extend({
   layout,
-  store: service(),
+  hintsPlugin: service('rdfa-editor-attendee-list-plugin'),
   attendees: A([]),
 
-  availableMemberships: computed('attendees.[]', 'memberships.[]', function(){
-    return this.memberships.filter(m => ! this.attendees.includes(m.member)).sortBy('member.firstname');
+  currentValue: computed('info.plainValue', function() {
+    this.searchAttendees.perform();
+    return this.info.plainValue;
   }),
+
+  async searchAttendeesOld() {
+    const firstname = this.info.plainValue;
+    const allMatching = await this.hintsPlugin.searchAttendees(firstname);
+    try {
+      this.set('candidateAttendees', allMatching.filter(a => this.stringify(a) !== firstname.trim()));
+    } catch (err) {
+      //
+    }
+  },
+
+  searchAttendees: task(function * () {
+    const firstname = this.info.plainValue;
+    const allMatching = yield this.hintsPlugin.searchAttendees(firstname);
+    this.set('candidateAttendees', allMatching.filter(a => this.stringify(a) !== firstname.trim()));
+  }),
+
+  stringify (attendee) {
+    return `${attendee.get('member.firstname')} ${attendee.get('member.lastname')} - ${attendee.get('member.organization.title')}`;
+  },
 
   nonMemberPeople: computed('people.[]', function(){
     const memberPeople = this.memberships.toArray().flatMap(m => m.member);
@@ -39,10 +61,11 @@ export default Component.extend({
       .map(member => `
         <li property="notable:meetingAttendee"
             typeof="org:Membership">
-          <span resource="http://data.notable.redpencil.io/person/${member.get('id')}"
+          <span resource="http://data.notable.redpencil.io/persons/${member.get('id')}"
                 typeof="foaf:Person"
                 property="org:member">
-            <span property="foaf:firstName">${member.get('firstname')} </span>
+            <span property="foaf:firstName">${member.get('firstname')}</span>
+            <span> </span>
             <span property="foaf:LastName">${member.get('lastname')}</span>
             <span> - </span>
             <span property="org:memberOf"
@@ -105,32 +128,28 @@ export default Component.extend({
   */
   hintsRegistry: reads('info.hintsRegistry'),
 
-  async init() {
-    this._super(...arguments);
-
-    this.set('memberships', await this.store.query('membership', {
-      include: 'member,member.organization'
-    }));
-
-    this.set('organizations', (await this.store.findAll('organization')).sortBy('title'));
-    this.set('people', await this.store.query('person', {
-      include: 'organization'
-    }));
-    this.set('roles', (await this.store.findAll('role')).sortBy('label'));
-
-    this.set('status', EmberObject.create({
-      isEditing: true,
-      isAdding: false,
-      isCreatingMembership: false,
-      isCreatingPerson: false
-    }));
-  },
+  memberships: reads('hintsPlugin.memberships'),
+  organizations: reads('hintsPlugin.organizations'),
+  roles: reads('hintsPlugin.roles'),
 
   setStatus (status) {
     this.status.set('isEditing', status === 'isEditing');
-    this.status.set('isAdding', status === 'isAdding');
+    this.status.set('isSelecting', status === 'isSelecting');
     this.status.set('isCreatingMembership', status === 'isCreatingMembership');
     this.status.set('isCreatingPerson', status === 'isCreatingPerson');
+  },
+
+  async init() {
+    this._super(...arguments);
+
+    this.set('candidateAttendees', A([]));
+
+    this.set('status', EmberObject.create({
+      isEditing: false,
+      isSelecting: true,
+      isCreatingMembership: false,
+      isCreatingPerson: false
+    }));
   },
 
   actions: {
@@ -152,23 +171,32 @@ export default Component.extend({
       this.hintsRegistry.removeHintsAtLocation(this.location, this.hrId, this.who);
     },
 
-    async createMembership() {
-      const membership = this.store.createRecord('membership', {
-        member: this.selectedPerson,
-        role: this.selectedRole
-      });
+    async insert(){
+      const mappedLocation = this.get('hintsRegistry').updateLocationToCurrentIndex(this.get('hrId'), this.get('location'));
+      this.get('hintsRegistry').removeHintsAtLocation(mappedLocation, this.get('hrId'), 'editor-plugins/attendee-list-card');
+      const sel = window.getSelection();
+      const range = sel.getRangeAt(0);
+      const li = range.startContainer.parentNode;
+      li.innerHTML = `
+        <span property="notable:meetingAttendee"
+            typeof="org:Membership"
+            resource="http://data.notable.redpencil.io/membership/${this.selectedMembership.id}">
+          ${this.stringify( this.selectedMembership)}
+        </span>
+      `;
+      this.hintsRegistry.removeHintsAtLocation(this.location, this.hrId, this.who);
+    },
 
-      await membership.save();
+    async createMembership() {
+      await this.hintsPlugin.createMembership();
     },
 
     async createPerson() {
-      const person = this.store.createRecord('person', {
+      await this.hintsPlugin.createPerson({
         firstname: this.newFirstname,
         lastname: this.newLastname,
         organization: this.selectedOrganization
       });
-      await person.save();
-
       this.setStatus( 'isCreatingMembership' );
     },
 
